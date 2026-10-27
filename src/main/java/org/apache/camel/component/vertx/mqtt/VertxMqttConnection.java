@@ -351,8 +351,11 @@ final class VertxMqttConnection {
 
     /**
      * Ends the subscription. Messages that arrive afterwards are dropped.
+     *
+     * @param atBroker whether to unsubscribe at the broker as well. Not for a session the broker keeps: it holds the
+     *                 messages of the subscription until the client is back
      */
-    void unsubscribe() {
+    void unsubscribe(boolean atBroker) {
         CompletableFuture<Void> done = new CompletableFuture<>();
         Context running = context;
         if (running == null) {
@@ -362,7 +365,7 @@ final class VertxMqttConnection {
             String filter = subscription;
             subscription = null;
             messageHandler = null;
-            if (filter != null && client != null && client.isConnected()) {
+            if (atBroker && filter != null && client != null && client.isConnected()) {
                 client.unsubscribe(filter).onComplete(ar -> done.complete(null));
             } else {
                 done.complete(null);

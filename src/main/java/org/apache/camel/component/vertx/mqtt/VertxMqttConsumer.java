@@ -60,7 +60,8 @@ public class VertxMqttConsumer extends DefaultConsumer {
     @Override
     protected void doStop() throws Exception {
         if (connection != null) {
-            connection.unsubscribe();
+            // A session the broker keeps (no clean start) keeps the subscription, messages wait there meanwhile
+            connection.unsubscribe(getEndpoint().getConfiguration().isCleanStart());
             connection = null;
             getEndpoint().releaseConnection();
         }

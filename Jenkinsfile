@@ -21,6 +21,9 @@ pipeline {
         booleanParam(name: "RELEASE",
                 description: "Release instead of deploying a SNAPSHOT: builds with the next free version (v<revision>.N, counted from the tags), deploys it and pushes the tag. Only on main.",
                 defaultValue: false)
+        booleanParam(name: "INTEGRATION_TESTS",
+                description: "Also run the *IT classes against Mosquitto and HiveMQ CE in containers (Testcontainers). Needs Docker on the agent.",
+                defaultValue: false)
         booleanParam(name: "CLEANUP",
                 description: "Cleanup Current Workspace.",
                 defaultValue: false)
@@ -37,7 +40,7 @@ pipeline {
             steps {
                 withMaven(maven: 'M3', mavenSettingsConfig: 'iot_maven') {
                     withEnv(["MVN_PARAMS=${mvnParams()}"]) {
-                        sh "mvn \$MVN_PARAMS -e -B clean deploy"
+                        sh "mvn \$MVN_PARAMS -e -B clean deploy ${params.INTEGRATION_TESTS ? '-Pintegration-tests' : ''}"
                     }
                 }
             }

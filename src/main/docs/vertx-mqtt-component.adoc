@@ -82,6 +82,11 @@ broker that cannot be reached fails the start of the route.
 The Vert.x client keeps no session of its own: a message the broker did not acknowledge when the connection was lost
 is not sent again, its exchange fails.
 
+With `cleanStart=false` the broker keeps the session of the client, with MQTT 5 for `sessionExpiryInterval` seconds.
+A consumer that stops then keeps its subscription at the broker, which holds the messages of quality of service 1 and
+2 until the consumer connects again with the same `clientId`. With `cleanStart=true` (the default) a stopping consumer
+unsubscribes.
+
 === Quality of service and acknowledgement
 
 The producer completes an exchange when the broker acknowledged the message, with PUBACK for quality of service 1 and
