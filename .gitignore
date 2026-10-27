@@ -1,0 +1,9 @@
+target/
+.flattened-pom.xml
+.classpath
+.project
+.settings/
+.factorypath
+.idea/
+*.iml
+.DS_Store

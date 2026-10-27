@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright (c) 2026 IoT Invent GmbH
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!--
+  Built like a module of components/camel-vertx in Apache Camel, so that it can be contributed without
+  restructuring: the package is org.apache.camel.component.vertx.mqtt, the generated configurers, URI factory,
+  catalog JSON and service descriptors live in src/generated and are committed, as Camel does.
+
+  Deliberately no parent: on contribution camel-vertx-parent takes its place. Built against the Camel of
+  xCloud, but on Vert.x 5. Camel up to 4.23 is on Vert.x 4.5, Camel main (4.24) on Vert.x 5, which is why
+  camel-vertx-common is no dependency here.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>io.rtlscloud.camel</groupId>
+    <artifactId>camel-vertx-mqtt</artifactId>
+    <version>${revision}${changelist}</version>
+    <packaging>jar</packaging>
+
+    <name>Camel :: Vert.x :: MQTT</name>
+    <description>Camel MQTT 3.1.1 and 5 client component on the Vert.x MQTT client</description>
+    <url>https://github.com/iot-invent/camel-vertx-mqtt</url>
+
+    <organization>
+        <name>IoT Invent GmbH</name>
+        <url>https://www.iot-invent.com</url>
+    </organization>
+    <licenses>
+        <license>
+            <name>Apache-2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <scm>
+        <connection>scm:git:https://github.com/iot-invent/camel-vertx-mqtt.git</connection>
+        <developerConnection>scm:git:https://github.com/iot-invent/camel-vertx-mqtt.git</developerConnection>
+        <url>https://github.com/iot-invent/camel-vertx-mqtt</url>
+        <tag>HEAD</tag>
+    </scm>
+    <developers>
+        <developer>
+            <id>huber-and</id>
+            <name>Andreas Huber</name>
+            <email>andreas.huber@iot-invent.com</email>
+            <organization>IoT Invent GmbH</organization>
+        </developer>
+    </developers>
+
+    <properties>
+        <revision>0.1</revision>
+        <changelist>-SNAPSHOT</changelist>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <!-- The Java baseline of Camel 4 -->
+        <maven.compiler.release>17</maven.compiler.release>
+
+        <camel.version>4.22.2</camel.version>
+        <vertx.version>5.2.2</vertx.version>
+        <junit-jupiter.version>5.14.4</junit-jupiter.version>
+        <awaitility.version>4.3.0</awaitility.version>
+
+        <build-helper.plugin.version>3.6.0</build-helper.plugin.version>
+        <compiler.plugin.version>3.16.0</compiler.plugin.version>
+        <surefire.plugin.version>3.5.6</surefire.plugin.version>
+        <failsafe.plugin.version>3.5.6</failsafe.plugin.version>
+        <resources.plugin.version>3.5.0</resources.plugin.version>
+        <jar.plugin.version>3.5.1</jar.plugin.version>
+        <source.plugin.version>3.4.0</source.plugin.version>
+        <install.plugin.version>3.1.4</install.plugin.version>
+        <deploy.plugin.version>3.1.4</deploy.plugin.version>
+        <enforcer.plugin.version>3.6.3</enforcer.plugin.version>
+        <flatten.plugin.version>1.8.0</flatten.plugin.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.camel</groupId>
+                <artifactId>camel-bom</artifactId>
+                <version>${camel.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.vertx</groupId>
+                <artifactId>vertx-dependencies</artifactId>
+                <version>${vertx.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>${junit-jupiter.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-support</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-mqtt</artifactId>
+        </dependency>
+
+        <!-- testing -->
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-test-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>${awaitility.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${compiler.plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${surefire.plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>${failsafe.plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>${resources.plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>${jar.plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-install-plugin</artifactId>
+                    <version>${install.plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-deploy-plugin</artifactId>
+                    <version>${deploy.plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-enforcer-plugin</artifactId>
+                    <version>${enforcer.plugin.version}</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        <plugins>
+            <!-- What Camel's parent does for every component: the generated code is a source root of its own -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>${build-helper.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>add-generated</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                            <goal>add-resource</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>src/generated/java</source>
+                            </sources>
+                            <resources>
+                                <resource>
+                                    <directory>src/generated/resources</directory>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Configurers, URI factory, catalog JSON and service descriptors from the annotations, into
+                 src/generated (the default of the plugin). After a change of an option, build twice: the
+                 plugin runs after compile, the second build compiles what it generated. -->
+            <plugin>
+                <groupId>org.apache.camel</groupId>
+                <artifactId>camel-component-maven-plugin</artifactId>
+                <version>${camel.version}</version>
+                <executions>
+                    <execution>
+                        <id>generate</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- ${revision}${changelist} resolved in the deployed POM -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>${flatten.plugin.version}</version>
+                <configuration>
+                    <updatePomFile>true</updatePomFile>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten.clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>${source.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!-- What the Jenkins release run adds: no SNAPSHOT, neither here nor in what this depends on -->
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-enforcer-plugin</artifactId>
+                        <configuration>
+                            <rules>
+                                <requireMavenVersion>
+                                    <version>3.9</version>
+                                </requireMavenVersion>
+                                <requireReleaseDeps>
+                                    <message>No Snapshots Allowed!</message>
+                                </requireReleaseDeps>
+                                <requireReleaseVersion>
+                                    <message>No Snapshots Allowed!</message>
+                                </requireReleaseVersion>
+                            </rules>
+                            <fail>true</fail>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+    <!-- repo.releases and repo.snapshots come from the Maven settings of the Jenkins build -->
+    <distributionManagement>
+        <repository>
+            <id>nexus</id>
+            <name>Release Repository</name>
+            <url>${repo.releases}</url>
+        </repository>
+        <snapshotRepository>
+            <id>nexus</id>
+            <name>Snapshot</name>
+            <url>${repo.snapshots}</url>
+        </snapshotRepository>
+    </distributionManagement>
+</project>
