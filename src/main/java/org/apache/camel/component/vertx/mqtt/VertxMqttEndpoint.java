@@ -88,7 +88,9 @@ public class VertxMqttEndpoint extends DefaultEndpoint implements EndpointServic
 
     @Override
     public Consumer createConsumer(Processor processor) throws Exception {
-        throw new UnsupportedOperationException("The consumer is not implemented yet");
+        VertxMqttConsumer consumer = new VertxMqttConsumer(this, processor);
+        configureConsumer(consumer);
+        return consumer;
     }
 
     /**

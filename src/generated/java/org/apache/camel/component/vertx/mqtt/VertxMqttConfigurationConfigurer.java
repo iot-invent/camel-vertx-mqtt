@@ -43,6 +43,8 @@ public class VertxMqttConfigurationConfigurer extends org.apache.camel.support.c
         case "maxInflightQueue": target.setMaxInflightQueue(property(camelContext, int.class, value)); return true;
         case "maxmessagesize":
         case "maxMessageSize": target.setMaxMessageSize(property(camelContext, int.class, value)); return true;
+        case "maxpendingmessages":
+        case "maxPendingMessages": target.setMaxPendingMessages(property(camelContext, int.class, value)); return true;
         case "maxreconnectdelay":
         case "maxReconnectDelay": target.setMaxReconnectDelay(property(camelContext, long.class, value)); return true;
         case "mqttversion":
@@ -94,6 +96,8 @@ public class VertxMqttConfigurationConfigurer extends org.apache.camel.support.c
         case "maxInflightQueue": return int.class;
         case "maxmessagesize":
         case "maxMessageSize": return int.class;
+        case "maxpendingmessages":
+        case "maxPendingMessages": return int.class;
         case "maxreconnectdelay":
         case "maxReconnectDelay": return long.class;
         case "mqttversion":
@@ -146,6 +150,8 @@ public class VertxMqttConfigurationConfigurer extends org.apache.camel.support.c
         case "maxInflightQueue": return target.getMaxInflightQueue();
         case "maxmessagesize":
         case "maxMessageSize": return target.getMaxMessageSize();
+        case "maxpendingmessages":
+        case "maxPendingMessages": return target.getMaxPendingMessages();
         case "maxreconnectdelay":
         case "maxReconnectDelay": return target.getMaxReconnectDelay();
         case "mqttversion":

@@ -145,6 +145,12 @@ public class VertxMqttConfiguration implements Cloneable {
     @UriParam(label = "consumer", defaultValue = "false")
     private boolean manualAcksEnabled;
     /**
+     * The most received messages waiting for their exchange to complete. Beyond it the client stops reading from the
+     * connection until the consumer caught up, which holds back the broker for every quality of service.
+     */
+    @UriParam(label = "consumer,advanced", defaultValue = "1000")
+    private int maxPendingMessages = 1000;
+    /**
      * The user name to authenticate with.
      */
     @UriParam(label = "security", secret = true)
@@ -340,6 +346,14 @@ public class VertxMqttConfiguration implements Cloneable {
 
     public void setManualAcksEnabled(boolean manualAcksEnabled) {
         this.manualAcksEnabled = manualAcksEnabled;
+    }
+
+    public int getMaxPendingMessages() {
+        return maxPendingMessages;
+    }
+
+    public void setMaxPendingMessages(int maxPendingMessages) {
+        this.maxPendingMessages = maxPendingMessages;
     }
 
     public String getUsername() {

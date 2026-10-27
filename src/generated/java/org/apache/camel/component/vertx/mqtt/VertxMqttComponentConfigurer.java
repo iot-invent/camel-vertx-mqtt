@@ -57,6 +57,8 @@ public class VertxMqttComponentConfigurer extends PropertyConfigurerSupport impl
         case "maxInflightQueue": getOrCreateConfiguration(target).setMaxInflightQueue(property(camelContext, int.class, value)); return true;
         case "maxmessagesize":
         case "maxMessageSize": getOrCreateConfiguration(target).setMaxMessageSize(property(camelContext, int.class, value)); return true;
+        case "maxpendingmessages":
+        case "maxPendingMessages": getOrCreateConfiguration(target).setMaxPendingMessages(property(camelContext, int.class, value)); return true;
         case "maxreconnectdelay":
         case "maxReconnectDelay": getOrCreateConfiguration(target).setMaxReconnectDelay(property(camelContext, java.time.Duration.class, value).toMillis()); return true;
         case "mqttversion":
@@ -125,6 +127,8 @@ public class VertxMqttComponentConfigurer extends PropertyConfigurerSupport impl
         case "maxInflightQueue": return int.class;
         case "maxmessagesize":
         case "maxMessageSize": return int.class;
+        case "maxpendingmessages":
+        case "maxPendingMessages": return int.class;
         case "maxreconnectdelay":
         case "maxReconnectDelay": return long.class;
         case "mqttversion":
@@ -189,6 +193,8 @@ public class VertxMqttComponentConfigurer extends PropertyConfigurerSupport impl
         case "maxInflightQueue": return getOrCreateConfiguration(target).getMaxInflightQueue();
         case "maxmessagesize":
         case "maxMessageSize": return getOrCreateConfiguration(target).getMaxMessageSize();
+        case "maxpendingmessages":
+        case "maxPendingMessages": return getOrCreateConfiguration(target).getMaxPendingMessages();
         case "maxreconnectdelay":
         case "maxReconnectDelay": return getOrCreateConfiguration(target).getMaxReconnectDelay();
         case "mqttversion":

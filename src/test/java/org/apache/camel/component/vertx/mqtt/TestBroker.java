@@ -65,6 +65,7 @@ final class TestBroker implements AutoCloseable {
     private final Queue<Integer> acknowledged = new ConcurrentLinkedQueue<>();
     private final List<MqttEndpoint> endpoints = new CopyOnWriteArrayList<>();
     private final AtomicInteger connects = new AtomicInteger();
+    private final AtomicInteger packetIds = new AtomicInteger(1);
     private volatile MqttEndpoint lastConnect;
     private volatile boolean acknowledgePublications = true;
     private volatile MqttConnectReturnCode reject;
@@ -209,7 +210,10 @@ final class TestBroker implements AutoCloseable {
     private void route(String topic, Buffer payload, int qos, boolean retain, MqttProperties properties) {
         subscriptions.forEach((subscriber, filters) -> filters.forEach((filter, granted) -> {
             if (matches(filter, topic) && subscriber.isConnected()) {
-                subscriber.publish(topic, payload, MqttQoS.valueOf(Math.min(qos, granted)), false, retain, 0,
+                int effective = Math.min(qos, granted);
+                // A packet identifier for quality of service 1 and 2 is 1 to 65535, 0 for 0
+                int packetId = effective == 0 ? 0 : packetIds.getAndUpdate(id -> id >= 65_535 ? 1 : id + 1);
+                subscriber.publish(topic, payload, MqttQoS.valueOf(effective), false, retain, packetId,
                         properties == null ? MqttProperties.NO_PROPERTIES : properties);
             }
         }));

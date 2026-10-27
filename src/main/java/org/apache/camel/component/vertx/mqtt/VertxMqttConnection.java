@@ -29,11 +29,13 @@ import io.netty.handler.codec.mqtt.MqttProperties;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.mqtt.MqttClient;
 import io.vertx.mqtt.MqttClientOptions;
+import io.vertx.mqtt.messages.MqttPublishMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,8 +69,10 @@ final class VertxMqttConnection {
     private long reconnectTimer = -1;
     private long nextDelay;
     private final List<Promise<MqttClient>> waiting = new ArrayList<>();
-    private final List<Runnable> connectListeners = new ArrayList<>();
-    private final List<Runnable> closeListeners = new ArrayList<>();
+    // The subscription of the consumer, made again on every connect: the client keeps no session of its own
+    private String subscription;
+    private int subscriptionQos;
+    private Handler<MqttPublishMessage> messageHandler;
     // Messages of quality of service 1 and 2 waiting for their acknowledgement, by packet identifier
     private final Map<Integer, Promise<Void>> unacknowledged = new HashMap<>();
 
@@ -103,6 +107,19 @@ final class VertxMqttConnection {
                                                                      + configuration.getAckTimeout() + " seconds"));
             client.publishCompletionUnknownPacketIdHandler(
                     packetId -> LOG.debug("Acknowledgement of the unknown packet {} from {}", packetId, broker));
+            client.publishHandler(message -> {
+                Handler<MqttPublishMessage> handler = messageHandler;
+                if (handler != null) {
+                    handler.handle(message);
+                } else {
+                    LOG.debug("Message on {} from {} without a subscriber", message.topicName(), broker);
+                }
+            });
+            client.subscribeCompletionHandler(ack -> {
+                if (ack.grantedQoSLevels().stream().anyMatch(granted -> granted == null || granted > 2)) {
+                    LOG.warn("The MQTT broker {} refused the subscription to {}", broker, subscription);
+                }
+            });
             connect(first);
         });
         if (!configuration.isAutomaticReconnect()) {
@@ -172,7 +189,7 @@ final class VertxMqttConnection {
                 connected = true;
                 nextDelay = Math.max(1, configuration.getReconnectDelay());
                 LOG.info("Connected to the MQTT broker {}", broker);
-                connectListeners.forEach(Runnable::run);
+                subscribe();
                 waiting.forEach(promise -> promise.tryComplete(client));
                 waiting.clear();
                 if (first != null) {
@@ -193,14 +210,10 @@ final class VertxMqttConnection {
     }
 
     private void closed() {
-        boolean wasConnected = connected;
         connected = false;
         // The client keeps no session of its own, a message sent before the loss is not sent again
         failUnacknowledged(new IllegalStateException(
                 "The connection to the MQTT broker " + broker + " was lost before the message was acknowledged"));
-        if (wasConnected) {
-            closeListeners.forEach(Runnable::run);
-        }
         // A failed connect closes the connection too, and reconnects from its own completion
         if (stopping || connecting) {
             return;
@@ -316,22 +329,68 @@ final class VertxMqttConnection {
     }
 
     /**
-     * @param listener run on the context after every successful connect, the first included
+     * Subscribes now if connected, and again after every reconnect.
+     *
+     * @param handler called on the context for every message the broker sends
      */
-    void onConnect(Runnable listener) {
+    void subscribe(String filter, int qos, Handler<MqttPublishMessage> handler) {
         run(() -> {
-            connectListeners.add(listener);
-            if (client != null && client.isConnected()) {
-                listener.run();
-            }
+            subscription = filter;
+            subscriptionQos = qos;
+            messageHandler = handler;
+            subscribe();
         });
     }
 
+    private void subscribe() {
+        if (subscription != null && client != null && client.isConnected()) {
+            client.subscribe(subscription, subscriptionQos).onFailure(
+                    e -> LOG.warn("Cannot subscribe to {} on {}: {}", subscription, broker, e.getMessage()));
+        }
+    }
+
     /**
-     * @param listener run on the context whenever an established connection closes
+     * Ends the subscription. Messages that arrive afterwards are dropped.
      */
-    void onClose(Runnable listener) {
-        run(() -> closeListeners.add(listener));
+    void unsubscribe() {
+        CompletableFuture<Void> done = new CompletableFuture<>();
+        Context running = context;
+        if (running == null) {
+            return;
+        }
+        running.runOnContext(v -> {
+            String filter = subscription;
+            subscription = null;
+            messageHandler = null;
+            if (filter != null && client != null && client.isConnected()) {
+                client.unsubscribe(filter).onComplete(ar -> done.complete(null));
+            } else {
+                done.complete(null);
+            }
+        });
+        try {
+            done.get(10, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            LOG.debug("Unsubscribing from {} did not complete", broker, e);
+        }
+    }
+
+    /**
+     * Stops reading from the connection while the consumer catches up, and goes on again.
+     */
+    void pause(boolean pause) {
+        run(() -> {
+            if (client != null) {
+                if (pause) {
+                    client.pause();
+                } else {
+                    client.resume();
+                }
+            }
+        });
     }
 
     /**
