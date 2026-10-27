@@ -1,0 +1,290 @@
+/*
+ * Copyright (c) 2026 IoT Invent GmbH
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.camel.component.vertx.mqtt;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.regex.Pattern;
+
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
+import io.vertx.mqtt.MqttClient;
+import io.vertx.mqtt.MqttClientOptions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * The connection of an endpoint to its broker, shared by its consumer and producer: one Vert.x MQTT client, connected
+ * again when the connection is lost.
+ * <p>
+ * Every call of the client runs on one Vert.x context, the one the client was connected on, so its state needs no
+ * locks and an acknowledgement can never overtake the bookkeeping of the message it acknowledges. The client is held
+ * in a field until the connection stops: Vert.x 5 closes a client that is no longer reachable, open connection
+ * included.
+ */
+final class VertxMqttConnection {
+
+    private static final Logger LOG = LoggerFactory.getLogger(VertxMqttConnection.class);
+    private static final Pattern IP_ADDRESS = Pattern.compile("[0-9.]+|.*:.*");
+
+    private final Vertx vertx;
+    private final BrokerAddress broker;
+    private final MqttClientOptions options;
+    private final VertxMqttConfiguration configuration;
+
+    private Context context;
+    private MqttClient client;
+    private volatile boolean started;
+    private volatile boolean stopping;
+    private volatile boolean connected;
+
+    // Below on the context only
+    private boolean connecting;
+    private long reconnectTimer = -1;
+    private long nextDelay;
+    private final List<Promise<MqttClient>> waiting = new ArrayList<>();
+    private final List<Runnable> connectListeners = new ArrayList<>();
+    private final List<Runnable> closeListeners = new ArrayList<>();
+
+    VertxMqttConnection(Vertx vertx, BrokerAddress broker, MqttClientOptions options,
+                        VertxMqttConfiguration configuration) {
+        this.vertx = vertx;
+        this.broker = broker;
+        this.options = options;
+        this.configuration = configuration;
+    }
+
+    /**
+     * Connects. With automatic reconnect it returns at once and keeps trying in the background, without it a failed
+     * connection fails the start.
+     */
+    synchronized void start() throws Exception {
+        if (started) {
+            return;
+        }
+        started = true;
+        stopping = false;
+        nextDelay = Math.max(1, configuration.getReconnectDelay());
+        context = vertx.getOrCreateContext();
+        client = MqttClient.create(vertx, options);
+        CompletableFuture<Void> first = new CompletableFuture<>();
+        context.runOnContext(v -> {
+            client.closeHandler(closed -> closed());
+            client.exceptionHandler(e -> LOG.debug("Error on the connection to {}", broker, e));
+            connect(first);
+        });
+        if (!configuration.isAutomaticReconnect()) {
+            try {
+                first.get(configuration.getConnectTimeout() + 5_000, TimeUnit.MILLISECONDS);
+            } catch (ExecutionException e) {
+                stop();
+                throw new IllegalStateException("Cannot connect to the MQTT broker " + broker, e.getCause());
+            } catch (TimeoutException e) {
+                stop();
+                throw new IllegalStateException("Timed out connecting to the MQTT broker " + broker, e);
+            }
+        }
+    }
+
+    /**
+     * Disconnects and stops reconnecting. Waits for the disconnect for a while, never fails.
+     */
+    synchronized void stop() {
+        if (!started) {
+            return;
+        }
+        started = false;
+        stopping = true;
+        CompletableFuture<Void> done = new CompletableFuture<>();
+        context.runOnContext(v -> {
+            if (reconnectTimer != -1) {
+                vertx.cancelTimer(reconnectTimer);
+                reconnectTimer = -1;
+            }
+            IllegalStateException stopped = new IllegalStateException("The connection to " + broker + " stopped");
+            waiting.forEach(promise -> promise.tryFail(stopped));
+            waiting.clear();
+            if (client.isConnected()) {
+                client.disconnect().onComplete(ar -> done.complete(null));
+            } else {
+                done.complete(null);
+            }
+        });
+        try {
+            done.get(10, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            LOG.debug("Disconnecting from {} did not complete", broker, e);
+        }
+        connected = false;
+        // Only now: until the disconnect completed, the client must stay reachable
+        client = null;
+    }
+
+    private void connect(CompletableFuture<Void> first) {
+        if (stopping) {
+            return;
+        }
+        connecting = true;
+        String serverName = broker.ssl() && !IP_ADDRESS.matcher(broker.host()).matches() ? broker.host() : null;
+        client.connect(broker.port(), broker.host(), serverName).onComplete(ar -> {
+            connecting = false;
+            if (ar.succeeded()) {
+                if (stopping) {
+                    client.disconnect();
+                    return;
+                }
+                connected = true;
+                nextDelay = Math.max(1, configuration.getReconnectDelay());
+                LOG.info("Connected to the MQTT broker {}", broker);
+                connectListeners.forEach(Runnable::run);
+                waiting.forEach(promise -> promise.tryComplete(client));
+                waiting.clear();
+                if (first != null) {
+                    first.complete(null);
+                }
+            } else {
+                LOG.warn("Cannot connect to the MQTT broker {}: {}", broker, ar.cause().getMessage());
+                if (first != null) {
+                    first.completeExceptionally(ar.cause());
+                }
+                if (configuration.isAutomaticReconnect()) {
+                    scheduleReconnect();
+                } else {
+                    failWaiting(ar.cause());
+                }
+            }
+        });
+    }
+
+    private void closed() {
+        boolean wasConnected = connected;
+        connected = false;
+        if (wasConnected) {
+            closeListeners.forEach(Runnable::run);
+        }
+        // A failed connect closes the connection too, and reconnects from its own completion
+        if (stopping || connecting) {
+            return;
+        }
+        LOG.warn("The connection to the MQTT broker {} was lost", broker);
+        if (configuration.isAutomaticReconnect()) {
+            scheduleReconnect();
+        } else {
+            failWaiting(new IllegalStateException("The connection to the MQTT broker " + broker + " was lost"));
+        }
+    }
+
+    private void scheduleReconnect() {
+        if (stopping || reconnectTimer != -1) {
+            return;
+        }
+        long delay = nextDelay;
+        nextDelay = Math.min(nextDelay * 2, Math.max(delay, configuration.getMaxReconnectDelay()));
+        LOG.debug("Reconnecting to the MQTT broker {} in {} ms", broker, delay);
+        reconnectTimer = vertx.setTimer(delay, id -> {
+            reconnectTimer = -1;
+            connect(null);
+        });
+    }
+
+    private void failWaiting(Throwable cause) {
+        waiting.forEach(promise -> promise.tryFail(cause));
+        waiting.clear();
+    }
+
+    /**
+     * @return the client once it is connected, on the context of the connection, failed if it does not connect within
+     *         the connect timeout
+     */
+    Future<MqttClient> whenConnected() {
+        Promise<MqttClient> promise = Promise.promise();
+        Context running = context;
+        if (running == null || stopping) {
+            return Future.failedFuture(new IllegalStateException("The connection to " + broker + " is not started"));
+        }
+        running.runOnContext(v -> {
+            if (stopping) {
+                promise.tryFail(new IllegalStateException("The connection to " + broker + " stopped"));
+            } else if (client.isConnected()) {
+                promise.tryComplete(client);
+            } else if (!configuration.isAutomaticReconnect() && !connecting) {
+                promise.tryFail(new IllegalStateException("Not connected to the MQTT broker " + broker));
+            } else {
+                waiting.add(promise);
+                vertx.setTimer(Math.max(1, configuration.getConnectTimeout()), id -> {
+                    if (waiting.remove(promise)) {
+                        promise.tryFail(new IllegalStateException(
+                                "Not connected to the MQTT broker " + broker + " within the connect timeout"));
+                    }
+                });
+            }
+        });
+        return promise.future();
+    }
+
+    /**
+     * Runs a task on the context of the connection.
+     */
+    void run(Runnable task) {
+        Context running = context;
+        if (running != null) {
+            running.runOnContext(v -> task.run());
+        }
+    }
+
+    /**
+     * @param listener run on the context after every successful connect, the first included
+     */
+    void onConnect(Runnable listener) {
+        run(() -> {
+            connectListeners.add(listener);
+            if (client != null && client.isConnected()) {
+                listener.run();
+            }
+        });
+    }
+
+    /**
+     * @param listener run on the context whenever an established connection closes
+     */
+    void onClose(Runnable listener) {
+        run(() -> closeListeners.add(listener));
+    }
+
+    /**
+     * @return the client while the connection is started, to be used on its context only
+     */
+    MqttClient client() {
+        return client;
+    }
+
+    boolean isConnected() {
+        return connected;
+    }
+
+    BrokerAddress broker() {
+        return broker;
+    }
+}

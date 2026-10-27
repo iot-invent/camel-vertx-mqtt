@@ -49,6 +49,8 @@ public class VertxMqttEndpoint extends DefaultEndpoint implements EndpointServic
     private VertxMqttConfiguration configuration;
 
     private BrokerAddress broker;
+    private VertxMqttConnection connection;
+    private int connectionUsers;
 
     public VertxMqttEndpoint(String uri, VertxMqttComponent component, VertxMqttConfiguration configuration,
                              String topic) {
@@ -87,6 +89,43 @@ public class VertxMqttEndpoint extends DefaultEndpoint implements EndpointServic
     @Override
     public Consumer createConsumer(Processor processor) throws Exception {
         throw new UnsupportedOperationException("The consumer is not implemented yet");
+    }
+
+    /**
+     * The connection of this endpoint, shared by its consumer and producer: started by the first of them, stopped with
+     * the last, so that an endpoint nobody uses does not connect.
+     *
+     * @return the started connection
+     */
+    synchronized VertxMqttConnection acquireConnection() throws Exception {
+        if (connection == null) {
+            VertxMqttConnection created = new VertxMqttConnection(getComponent().getVertx(), broker,
+                    createClientOptions(), configuration);
+            created.start();
+            connection = created;
+        }
+        connectionUsers++;
+        return connection;
+    }
+
+    /**
+     * Gives back the connection taken with {@link #acquireConnection()}, stopping it with its last user.
+     */
+    synchronized void releaseConnection() {
+        if (connectionUsers > 0 && --connectionUsers == 0 && connection != null) {
+            connection.stop();
+            connection = null;
+        }
+    }
+
+    @Override
+    protected synchronized void doStop() throws Exception {
+        if (connection != null) {
+            connection.stop();
+            connection = null;
+            connectionUsers = 0;
+        }
+        super.doStop();
     }
 
     /**
