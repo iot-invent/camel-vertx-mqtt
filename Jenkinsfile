@@ -1,8 +1,9 @@
 #!groovy
 @Library('iot-invent-shared') _
 
-// One line, built from main. A release is a run of main with RELEASE ticked: the next free version
-// <revision>.N, counted from the tags v<revision>.N.
+// Release lines: main and the version branches such as 4.22 (one per Camel line), each with a revision of its own
+// in pom.xml, so that their tags never collide. A release is a run of such a branch with RELEASE ticked: the next
+// free version <revision>.N, counted from the tags v<revision>.N.
 pipeline {
 
     agent any
@@ -19,7 +20,7 @@ pipeline {
     }
     parameters {
         booleanParam(name: "RELEASE",
-                description: "Release instead of deploying a SNAPSHOT: builds with the next free version (v<revision>.N, counted from the tags), deploys it and pushes the tag. Only on main.",
+                description: "Release instead of deploying a SNAPSHOT: builds with the next free version (v<revision>.N, counted from the tags), deploys it and pushes the tag. Only on main and on version branches such as 4.22.",
                 defaultValue: false)
         booleanParam(name: "INTEGRATION_TESTS",
                 description: "Also run the *IT classes against Mosquitto and HiveMQ CE in containers (Testcontainers). Needs Docker on the agent.",
@@ -49,8 +50,8 @@ pipeline {
             when { expression { params.RELEASE } }
             steps {
                 script {
-                    if (env.BRANCH_NAME != 'main') {
-                        error "RELEASE is only allowed on main, not on ${env.BRANCH_NAME}"
+                    if (!(env.BRANCH_NAME == 'main' || env.BRANCH_NAME ==~ /\d+\.\d+/)) {
+                        error "RELEASE is only allowed on main and on version branches such as 4.22, not on ${env.BRANCH_NAME}"
                     }
                     cleanWs()
                     checkout scm

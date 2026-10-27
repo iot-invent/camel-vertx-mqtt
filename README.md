@@ -21,13 +21,16 @@ The configurers, the URI factory, the catalog JSON and the service descriptors a
 annotations by `camel-component-maven-plugin` into `src/generated` and committed. The plugin runs after
 compilation, so after a change of an option a second build compiles what the first one generated.
 
-## Versions
+## Release lines
 
-| | |
-|---|---|
-| Java | 17 or later |
-| Camel | 4.22 |
-| Vert.x | 5.2 |
+| Branch | Versions | Camel | Vert.x | Java |
+|---|---|---|---|---|
+| `4.22` | `0.1.N` | 4.22 | 5.2 | 17 or later |
+| `main` | `0.2.N` | 4.22, 4.24 once it is released | 5.2 | 17 or later |
+
+Each line has a version of its own (`revision` in `pom.xml`), so that its tags `v<revision>.N` never collide
+with those of another line. `main` is the line towards the contribution to Apache Camel and moves to Camel 4.24
+once it is released. A fix for `4.22` is made there and merged into `main`.
 
 Camel up to 4.23 uses Vert.x 4.5, Camel 4.24 Vert.x 5. The component therefore does not depend on
 `camel-vertx-common`, which it would on contribution.
