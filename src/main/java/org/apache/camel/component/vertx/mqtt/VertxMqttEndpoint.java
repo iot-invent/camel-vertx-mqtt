@@ -168,8 +168,12 @@ public class VertxMqttEndpoint extends DefaultEndpoint implements EndpointServic
         }
         if (broker.ssl()) {
             options.setSsl(true);
+            if (configuration.getSslContextParameters() != null) {
+                VertxMqttTlsHelper.configure(options, configuration.getSslContextParameters(), getCamelContext());
+            }
             // Never switched off: without it any certificate of a trusted issuer passes for any host
             options.setHostnameVerificationAlgorithm("HTTPS");
+            options.setTrustAll(false);
         }
         return options;
     }

@@ -30,7 +30,9 @@ import io.netty.handler.codec.mqtt.MqttProperties;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.ClientAuth;
 import io.vertx.core.net.KeyCertOptions;
+import io.vertx.core.net.TrustOptions;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.MqttServer;
 import io.vertx.mqtt.MqttServerOptions;
@@ -83,10 +85,20 @@ final class TestBroker implements AutoCloseable {
      * @param keyCert the certificate of the broker, for TLS, or null for a plain broker
      */
     static TestBroker start(Vertx vertx, KeyCertOptions keyCert) throws Exception {
+        return start(vertx, keyCert, null);
+    }
+
+    /**
+     * @param clientTrust the certificates of clients the broker requires a client certificate of, null for none
+     */
+    static TestBroker start(Vertx vertx, KeyCertOptions keyCert, TrustOptions clientTrust) throws Exception {
         MqttServerOptions options = new MqttServerOptions().setHost("127.0.0.1")
                 .setMaxMessageSize(VertxMqttConstants.MAX_MESSAGE_SIZE);
         if (keyCert != null) {
             options.setSsl(true).setKeyCertOptions(keyCert);
+        }
+        if (clientTrust != null) {
+            options.setTrustOptions(clientTrust).setClientAuth(ClientAuth.REQUIRED);
         }
         TestBroker broker = new TestBroker(vertx, options);
         Exception last = null;
