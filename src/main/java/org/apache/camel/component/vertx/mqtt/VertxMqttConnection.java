@@ -16,17 +16,22 @@
 package org.apache.camel.component.vertx.mqtt;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 
+import io.netty.handler.codec.mqtt.MqttProperties;
+import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.mqtt.MqttClient;
 import io.vertx.mqtt.MqttClientOptions;
 import org.slf4j.Logger;
@@ -64,6 +69,8 @@ final class VertxMqttConnection {
     private final List<Promise<MqttClient>> waiting = new ArrayList<>();
     private final List<Runnable> connectListeners = new ArrayList<>();
     private final List<Runnable> closeListeners = new ArrayList<>();
+    // Messages of quality of service 1 and 2 waiting for their acknowledgement, by packet identifier
+    private final Map<Integer, Promise<Void>> unacknowledged = new HashMap<>();
 
     VertxMqttConnection(Vertx vertx, BrokerAddress broker, MqttClientOptions options,
                         VertxMqttConfiguration configuration) {
@@ -90,6 +97,12 @@ final class VertxMqttConnection {
         context.runOnContext(v -> {
             client.closeHandler(closed -> closed());
             client.exceptionHandler(e -> LOG.debug("Error on the connection to {}", broker, e));
+            client.publishCompletionHandler(this::acknowledged);
+            client.publishCompletionExpirationHandler(packetId -> unacknowledged(packetId,
+                    "The MQTT broker " + broker + " did not acknowledge the message within the ack timeout of "
+                                                                     + configuration.getAckTimeout() + " seconds"));
+            client.publishCompletionUnknownPacketIdHandler(
+                    packetId -> LOG.debug("Acknowledgement of the unknown packet {} from {}", packetId, broker));
             connect(first);
         });
         if (!configuration.isAutomaticReconnect()) {
@@ -123,6 +136,7 @@ final class VertxMqttConnection {
             IllegalStateException stopped = new IllegalStateException("The connection to " + broker + " stopped");
             waiting.forEach(promise -> promise.tryFail(stopped));
             waiting.clear();
+            failUnacknowledged(stopped);
             if (client.isConnected()) {
                 client.disconnect().onComplete(ar -> done.complete(null));
             } else {
@@ -181,6 +195,9 @@ final class VertxMqttConnection {
     private void closed() {
         boolean wasConnected = connected;
         connected = false;
+        // The client keeps no session of its own, a message sent before the loss is not sent again
+        failUnacknowledged(new IllegalStateException(
+                "The connection to the MQTT broker " + broker + " was lost before the message was acknowledged"));
         if (wasConnected) {
             closeListeners.forEach(Runnable::run);
         }
@@ -242,6 +259,50 @@ final class VertxMqttConnection {
             }
         });
         return promise.future();
+    }
+
+    /**
+     * Publishes a message once the client is connected.
+     *
+     * @param  properties the MQTT 5 properties, null for MQTT 3.1.1
+     * @return            completed when the broker acknowledged a message of quality of service 1 or 2, when it is
+     *                    written for 0
+     */
+    Future<Void> publish(String topic, Buffer payload, MqttQoS qos, boolean retain, MqttProperties properties) {
+        // Composed on the context, synchronously with the publish: the packet is registered before the event loop can
+        // read its acknowledgement
+        return whenConnected().compose(connectedClient -> {
+            Future<Integer> sent = properties == null
+                    ? connectedClient.publish(topic, payload, qos, false, retain)
+                    : connectedClient.publish(topic, payload, qos, false, retain, properties);
+            return sent.compose(packetId -> {
+                if (qos == MqttQoS.AT_MOST_ONCE) {
+                    return Future.succeededFuture();
+                }
+                Promise<Void> acknowledgement = Promise.promise();
+                unacknowledged.put(packetId, acknowledgement);
+                return acknowledgement.future();
+            });
+        });
+    }
+
+    private void acknowledged(int packetId) {
+        Promise<Void> acknowledgement = unacknowledged.remove(packetId);
+        if (acknowledgement != null) {
+            acknowledgement.tryComplete();
+        }
+    }
+
+    private void unacknowledged(int packetId, String reason) {
+        Promise<Void> acknowledgement = unacknowledged.remove(packetId);
+        if (acknowledgement != null) {
+            acknowledgement.tryFail(new IllegalStateException(reason));
+        }
+    }
+
+    private void failUnacknowledged(Throwable cause) {
+        unacknowledged.values().forEach(acknowledgement -> acknowledgement.tryFail(cause));
+        unacknowledged.clear();
     }
 
     /**

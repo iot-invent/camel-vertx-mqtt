@@ -83,7 +83,7 @@ public class VertxMqttEndpoint extends DefaultEndpoint implements EndpointServic
 
     @Override
     public Producer createProducer() throws Exception {
-        throw new UnsupportedOperationException("The producer is not implemented yet");
+        return new VertxMqttProducer(this);
     }
 
     @Override
