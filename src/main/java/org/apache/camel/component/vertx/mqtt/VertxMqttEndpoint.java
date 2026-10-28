@@ -15,6 +15,9 @@
  */
 package org.apache.camel.component.vertx.mqtt;
 
+import io.vertx.core.buffer.Buffer;
+import io.vertx.mqtt.MqttClientOptions;
+import io.vertx.mqtt.MqttClientWillOptions;
 import org.apache.camel.Category;
 import org.apache.camel.Consumer;
 import org.apache.camel.Processor;
@@ -26,10 +29,6 @@ import org.apache.camel.spi.UriParam;
 import org.apache.camel.spi.UriPath;
 import org.apache.camel.support.DefaultEndpoint;
 
-import io.vertx.core.buffer.Buffer;
-import io.vertx.mqtt.MqttClientOptions;
-import io.vertx.mqtt.MqttClientWillOptions;
-
 /**
  * Send and receive messages to and from an MQTT broker, MQTT 3.1.1 and 5, with the Vert.x MQTT client.
  */
@@ -39,8 +38,8 @@ import io.vertx.mqtt.MqttClientWillOptions;
 public class VertxMqttEndpoint extends DefaultEndpoint implements EndpointServiceLocation {
 
     /**
-     * The topic to publish on, or the topic filter to subscribe to. A filter may hold the wildcards + and #, a topic
-     * to publish on may not.
+     * The topic to publish on, or the topic filter to subscribe to. A filter may hold the wildcards + and #, a topic to
+     * publish on may not.
      */
     @UriPath
     @Metadata(required = true)
@@ -102,7 +101,8 @@ public class VertxMqttEndpoint extends DefaultEndpoint implements EndpointServic
      */
     synchronized VertxMqttConnection acquireConnection() throws Exception {
         if (connection == null) {
-            VertxMqttConnection created = new VertxMqttConnection(getComponent().getVertx(), broker,
+            VertxMqttConnection created = new VertxMqttConnection(
+                    getComponent().getVertx(), broker,
                     createClientOptions(), configuration);
             created.start();
             connection = created;

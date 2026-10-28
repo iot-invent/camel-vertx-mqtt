@@ -30,8 +30,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The catalog of the component as tools read it: a plain context finds it, and it offers no option that lowers the
- * TLS checks.
+ * The catalog of the component as tools read it: a plain context finds it, and it offers no option that lowers the TLS
+ * checks.
  */
 class VertxMqttCatalogTest {
 

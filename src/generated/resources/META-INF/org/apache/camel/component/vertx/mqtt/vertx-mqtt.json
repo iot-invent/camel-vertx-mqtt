@@ -11,7 +11,7 @@
     "supportLevel": "Preview",
     "groupId": "io.rtlscloud.camel",
     "artifactId": "camel-vertx-mqtt",
-    "version": "0.1-SNAPSHOT",
+    "version": "4.22-SNAPSHOT",
     "scheme": "vertx-mqtt",
     "extendsScheme": "",
     "syntax": "vertx-mqtt:topic",

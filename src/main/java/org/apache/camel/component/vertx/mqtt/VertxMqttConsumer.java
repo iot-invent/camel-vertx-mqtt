@@ -17,19 +17,18 @@ package org.apache.camel.component.vertx.mqtt;
 
 import java.util.concurrent.ExecutorService;
 
+import io.netty.handler.codec.mqtt.MqttQoS;
+import io.vertx.mqtt.messages.MqttPublishMessage;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.apache.camel.Processor;
 import org.apache.camel.support.DefaultConsumer;
 
-import io.netty.handler.codec.mqtt.MqttQoS;
-import io.vertx.mqtt.messages.MqttPublishMessage;
-
 /**
  * Subscribes to the topic filter of the endpoint and turns every message into an exchange.
  * <p>
- * Exchanges are processed in the order the messages arrive, on a thread of the consumer, never on the event loop of
- * the client, which also keeps the connection alive. With more than {@code maxPendingMessages} waiting the client stops
+ * Exchanges are processed in the order the messages arrive, on a thread of the consumer, never on the event loop of the
+ * client, which also keeps the connection alive. With more than {@code maxPendingMessages} waiting the client stops
  * reading from the connection until half of them are done.
  */
 public class VertxMqttConsumer extends DefaultConsumer {

@@ -25,8 +25,8 @@ public final class VertxMqttConstants {
     public static final String SCHEME = "vertx-mqtt";
 
     /**
-     * The largest message the MQTT protocol allows, 268435455 bytes. The Vert.x client treats its default of -1 as
-     * the 8092 bytes of the Netty decoder and closes the connection on a larger incoming message.
+     * The largest message the MQTT protocol allows, 268435455 bytes. The Vert.x client treats its default of -1 as the
+     * 8092 bytes of the Netty decoder and closes the connection on a larger incoming message.
      */
     public static final int MAX_MESSAGE_SIZE = 268_435_455;
 
