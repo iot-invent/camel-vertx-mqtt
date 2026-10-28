@@ -15,13 +15,14 @@
  */
 package org.apache.camel.component.vertx.mqtt;
 
-import io.netty.handler.codec.mqtt.MqttProperties;
-import io.netty.handler.codec.mqtt.MqttQoS;
-import io.vertx.core.buffer.Buffer;
 import org.apache.camel.AsyncCallback;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.apache.camel.support.DefaultAsyncProducer;
+
+import io.netty.handler.codec.mqtt.MqttProperties;
+import io.netty.handler.codec.mqtt.MqttQoS;
+import io.vertx.core.buffer.Buffer;
 
 /**
  * Publishes the body of a message. The exchange completes when the broker acknowledged a message of quality of service

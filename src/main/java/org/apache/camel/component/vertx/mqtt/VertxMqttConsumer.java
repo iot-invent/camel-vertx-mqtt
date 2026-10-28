@@ -17,12 +17,13 @@ package org.apache.camel.component.vertx.mqtt;
 
 import java.util.concurrent.ExecutorService;
 
-import io.netty.handler.codec.mqtt.MqttQoS;
-import io.vertx.mqtt.messages.MqttPublishMessage;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.apache.camel.Processor;
 import org.apache.camel.support.DefaultConsumer;
+
+import io.netty.handler.codec.mqtt.MqttQoS;
+import io.vertx.mqtt.messages.MqttPublishMessage;
 
 /**
  * Subscribes to the topic filter of the endpoint and turns every message into an exchange.
