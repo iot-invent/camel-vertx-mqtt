@@ -21,11 +21,22 @@ The configurers, the URI factory, the catalog JSON and the service descriptors a
 annotations by `camel-component-maven-plugin` into `src/generated` and committed. The plugin runs after
 compilation, so after a change of an option a second build compiles what the first one generated.
 
+## Code style
+
+The style of Apache Camel: `etc/eclipse/camel-eclipse-formatter-config.xml` is the formatter of Camel, taken
+unchanged from `org.apache.camel:camel-buildtools:4.22.2` (4 spaces, lines up to 128 characters). Imports in the
+groups `java`, `jakarta`, `javax`, `org.w3c`, `org.xml`, `junit`, then all others, static imports last, no
+wildcards. No `@author` tags. Every Java file starts with the Apache License header of `LICENSE`, copyright IoT Invent
+GmbH, until the contribution replaces it with the header of the ASF.
+
+In Eclipse: project properties, Java Code Style, Formatter, enable project specific settings and import the file,
+the same for Organize Imports and Save Actions, so that the settings of the workspace do not apply here.
+
 ## Release lines
 
 | Branch | Versions | Camel | Vert.x | Java |
 |---|---|---|---|---|
-| `4.22` | `0.1.N` | 4.22 | 5.2 | 17 or later |
+| `4.22` | `4.22.N` | 4.22 | 5.2 | 17 or later |
 | `main` | `0.2.N` | 4.22, 4.24 once it is released | 5.2 | 17 or later |
 
 Each line has a version of its own (`revision` in `pom.xml`), so that its tags `v<revision>.N` never collide

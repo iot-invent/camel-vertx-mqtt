@@ -43,10 +43,9 @@ import org.slf4j.LoggerFactory;
  * The connection of an endpoint to its broker, shared by its consumer and producer: one Vert.x MQTT client, connected
  * again when the connection is lost.
  * <p>
- * Every call of the client runs on one Vert.x context, the one the client was connected on, so its state needs no
- * locks and an acknowledgement can never overtake the bookkeeping of the message it acknowledges. The client is held
- * in a field until the connection stops: Vert.x 5 closes a client that is no longer reachable, open connection
- * included.
+ * Every call of the client runs on one Vert.x context, the one the client was connected on, so its state needs no locks
+ * and an acknowledgement can never overtake the bookkeeping of the message it acknowledges. The client is held in a
+ * field until the connection stops: Vert.x 5 closes a client that is no longer reachable, open connection included.
  */
 final class VertxMqttConnection {
 
@@ -76,8 +75,8 @@ final class VertxMqttConnection {
     // Messages of quality of service 1 and 2 waiting for their acknowledgement, by packet identifier
     private final Map<Integer, Promise<Void>> unacknowledged = new HashMap<>();
 
-    VertxMqttConnection(Vertx vertx, BrokerAddress broker, MqttClientOptions options,
-                        VertxMqttConfiguration configuration) {
+    VertxMqttConnection(final Vertx vertx, final BrokerAddress broker, final MqttClientOptions options,
+                        final VertxMqttConfiguration configuration) {
         this.vertx = vertx;
         this.broker = broker;
         this.options = options;
@@ -97,18 +96,19 @@ final class VertxMqttConnection {
         nextDelay = Math.max(1, configuration.getReconnectDelay());
         context = vertx.getOrCreateContext();
         client = MqttClient.create(vertx, options);
-        CompletableFuture<Void> first = new CompletableFuture<>();
+        final CompletableFuture<Void> first = new CompletableFuture<>();
         context.runOnContext(v -> {
             client.closeHandler(closed -> closed());
             client.exceptionHandler(e -> LOG.debug("Error on the connection to {}", broker, e));
             client.publishCompletionHandler(this::acknowledged);
             client.publishCompletionExpirationHandler(packetId -> unacknowledged(packetId,
                     "The MQTT broker " + broker + " did not acknowledge the message within the ack timeout of "
-                                                                     + configuration.getAckTimeout() + " seconds"));
+                                                                                           + configuration.getAckTimeout()
+                                                                                           + " seconds"));
             client.publishCompletionUnknownPacketIdHandler(
                     packetId -> LOG.debug("Acknowledgement of the unknown packet {} from {}", packetId, broker));
             client.publishHandler(message -> {
-                Handler<MqttPublishMessage> handler = messageHandler;
+                final Handler<MqttPublishMessage> handler = messageHandler;
                 if (handler != null) {
                     handler.handle(message);
                 } else {
@@ -125,10 +125,10 @@ final class VertxMqttConnection {
         if (!configuration.isAutomaticReconnect()) {
             try {
                 first.get(configuration.getConnectTimeout() + 5_000, TimeUnit.MILLISECONDS);
-            } catch (ExecutionException e) {
+            } catch (final ExecutionException e) {
                 stop();
                 throw new IllegalStateException("Cannot connect to the MQTT broker " + broker, e.getCause());
-            } catch (TimeoutException e) {
+            } catch (final TimeoutException e) {
                 stop();
                 throw new IllegalStateException("Timed out connecting to the MQTT broker " + broker, e);
             }
@@ -144,13 +144,13 @@ final class VertxMqttConnection {
         }
         started = false;
         stopping = true;
-        CompletableFuture<Void> done = new CompletableFuture<>();
+        final CompletableFuture<Void> done = new CompletableFuture<>();
         context.runOnContext(v -> {
             if (reconnectTimer != -1) {
                 vertx.cancelTimer(reconnectTimer);
                 reconnectTimer = -1;
             }
-            IllegalStateException stopped = new IllegalStateException("The connection to " + broker + " stopped");
+            final IllegalStateException stopped = new IllegalStateException("The connection to " + broker + " stopped");
             waiting.forEach(promise -> promise.tryFail(stopped));
             waiting.clear();
             failUnacknowledged(stopped);
@@ -162,7 +162,7 @@ final class VertxMqttConnection {
         });
         try {
             done.get(10, TimeUnit.SECONDS);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
@@ -173,12 +173,12 @@ final class VertxMqttConnection {
         client = null;
     }
 
-    private void connect(CompletableFuture<Void> first) {
+    private void connect(final CompletableFuture<Void> first) {
         if (stopping) {
             return;
         }
         connecting = true;
-        String serverName = broker.ssl() && !IP_ADDRESS.matcher(broker.host()).matches() ? broker.host() : null;
+        final String serverName = broker.ssl() && !IP_ADDRESS.matcher(broker.host()).matches() ? broker.host() : null;
         client.connect(broker.port(), broker.host(), serverName).onComplete(ar -> {
             connecting = false;
             if (ar.succeeded()) {
@@ -230,7 +230,7 @@ final class VertxMqttConnection {
         if (stopping || reconnectTimer != -1) {
             return;
         }
-        long delay = nextDelay;
+        final long delay = nextDelay;
         nextDelay = Math.min(nextDelay * 2, Math.max(delay, configuration.getMaxReconnectDelay()));
         LOG.debug("Reconnecting to the MQTT broker {} in {} ms", broker, delay);
         reconnectTimer = vertx.setTimer(delay, id -> {
@@ -239,7 +239,7 @@ final class VertxMqttConnection {
         });
     }
 
-    private void failWaiting(Throwable cause) {
+    private void failWaiting(final Throwable cause) {
         waiting.forEach(promise -> promise.tryFail(cause));
         waiting.clear();
     }
@@ -249,8 +249,8 @@ final class VertxMqttConnection {
      *         the connect timeout
      */
     Future<MqttClient> whenConnected() {
-        Promise<MqttClient> promise = Promise.promise();
-        Context running = context;
+        final Promise<MqttClient> promise = Promise.promise();
+        final Context running = context;
         if (running == null || stopping) {
             return Future.failedFuture(new IllegalStateException("The connection to " + broker + " is not started"));
         }
@@ -281,39 +281,41 @@ final class VertxMqttConnection {
      * @return            completed when the broker acknowledged a message of quality of service 1 or 2, when it is
      *                    written for 0
      */
-    Future<Void> publish(String topic, Buffer payload, MqttQoS qos, boolean retain, MqttProperties properties) {
+    Future<Void> publish(
+            final String topic, final Buffer payload, final MqttQoS qos, final boolean retain,
+            final MqttProperties properties) {
         // Composed on the context, synchronously with the publish: the packet is registered before the event loop can
         // read its acknowledgement
         return whenConnected().compose(connectedClient -> {
-            Future<Integer> sent = properties == null
+            final Future<Integer> sent = properties == null
                     ? connectedClient.publish(topic, payload, qos, false, retain)
                     : connectedClient.publish(topic, payload, qos, false, retain, properties);
             return sent.compose(packetId -> {
                 if (qos == MqttQoS.AT_MOST_ONCE) {
                     return Future.succeededFuture();
                 }
-                Promise<Void> acknowledgement = Promise.promise();
+                final Promise<Void> acknowledgement = Promise.promise();
                 unacknowledged.put(packetId, acknowledgement);
                 return acknowledgement.future();
             });
         });
     }
 
-    private void acknowledged(int packetId) {
-        Promise<Void> acknowledgement = unacknowledged.remove(packetId);
+    private void acknowledged(final int packetId) {
+        final Promise<Void> acknowledgement = unacknowledged.remove(packetId);
         if (acknowledgement != null) {
             acknowledgement.tryComplete();
         }
     }
 
-    private void unacknowledged(int packetId, String reason) {
-        Promise<Void> acknowledgement = unacknowledged.remove(packetId);
+    private void unacknowledged(final int packetId, final String reason) {
+        final Promise<Void> acknowledgement = unacknowledged.remove(packetId);
         if (acknowledgement != null) {
             acknowledgement.tryFail(new IllegalStateException(reason));
         }
     }
 
-    private void failUnacknowledged(Throwable cause) {
+    private void failUnacknowledged(final Throwable cause) {
         unacknowledged.values().forEach(acknowledgement -> acknowledgement.tryFail(cause));
         unacknowledged.clear();
     }
@@ -321,8 +323,8 @@ final class VertxMqttConnection {
     /**
      * Runs a task on the context of the connection.
      */
-    void run(Runnable task) {
-        Context running = context;
+    void run(final Runnable task) {
+        final Context running = context;
         if (running != null) {
             running.runOnContext(v -> task.run());
         }
@@ -333,7 +335,7 @@ final class VertxMqttConnection {
      *
      * @param handler called on the context for every message the broker sends
      */
-    void subscribe(String filter, int qos, Handler<MqttPublishMessage> handler) {
+    void subscribe(final String filter, final int qos, final Handler<MqttPublishMessage> handler) {
         run(() -> {
             subscription = filter;
             subscriptionQos = qos;
@@ -344,8 +346,8 @@ final class VertxMqttConnection {
 
     private void subscribe() {
         if (subscription != null && client != null && client.isConnected()) {
-            client.subscribe(subscription, subscriptionQos).onFailure(
-                    e -> LOG.warn("Cannot subscribe to {} on {}: {}", subscription, broker, e.getMessage()));
+            client.subscribe(subscription, subscriptionQos)
+                    .onFailure(e -> LOG.warn("Cannot subscribe to {} on {}: {}", subscription, broker, e.getMessage()));
         }
     }
 
@@ -355,14 +357,14 @@ final class VertxMqttConnection {
      * @param atBroker whether to unsubscribe at the broker as well. Not for a session the broker keeps: it holds the
      *                 messages of the subscription until the client is back
      */
-    void unsubscribe(boolean atBroker) {
-        CompletableFuture<Void> done = new CompletableFuture<>();
-        Context running = context;
+    void unsubscribe(final boolean atBroker) {
+        final CompletableFuture<Void> done = new CompletableFuture<>();
+        final Context running = context;
         if (running == null) {
             return;
         }
         running.runOnContext(v -> {
-            String filter = subscription;
+            final String filter = subscription;
             subscription = null;
             messageHandler = null;
             if (atBroker && filter != null && client != null && client.isConnected()) {
@@ -373,7 +375,7 @@ final class VertxMqttConnection {
         });
         try {
             done.get(10, TimeUnit.SECONDS);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
@@ -384,7 +386,7 @@ final class VertxMqttConnection {
     /**
      * Stops reading from the connection while the consumer catches up, and goes on again.
      */
-    void pause(boolean pause) {
+    void pause(final boolean pause) {
         run(() -> {
             if (client != null) {
                 if (pause) {

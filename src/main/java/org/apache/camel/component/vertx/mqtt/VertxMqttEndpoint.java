@@ -38,8 +38,8 @@ import org.apache.camel.support.DefaultEndpoint;
 public class VertxMqttEndpoint extends DefaultEndpoint implements EndpointServiceLocation {
 
     /**
-     * The topic to publish on, or the topic filter to subscribe to. A filter may hold the wildcards + and #, a topic
-     * to publish on may not.
+     * The topic to publish on, or the topic filter to subscribe to. A filter may hold the wildcards + and #, a topic to
+     * publish on may not.
      */
     @UriPath
     @Metadata(required = true)
@@ -101,7 +101,8 @@ public class VertxMqttEndpoint extends DefaultEndpoint implements EndpointServic
      */
     synchronized VertxMqttConnection acquireConnection() throws Exception {
         if (connection == null) {
-            VertxMqttConnection created = new VertxMqttConnection(getComponent().getVertx(), broker,
+            VertxMqttConnection created = new VertxMqttConnection(
+                    getComponent().getVertx(), broker,
                     createClientOptions(), configuration);
             created.start();
             connection = created;

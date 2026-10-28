@@ -59,9 +59,10 @@ public class VertxMqttComponent extends DefaultComponent implements SSLContextPa
     private boolean managedVertx;
 
     @Override
-    protected Endpoint createEndpoint(String uri, String remaining, Map<String, Object> parameters) throws Exception {
-        VertxMqttConfiguration config = getConfiguration().copy();
-        VertxMqttEndpoint endpoint = new VertxMqttEndpoint(uri, this, config, remaining);
+    protected Endpoint createEndpoint(final String uri, final String remaining, final Map<String, Object> parameters)
+            throws Exception {
+        final VertxMqttConfiguration config = getConfiguration().copy();
+        final VertxMqttEndpoint endpoint = new VertxMqttEndpoint(uri, this, config, remaining);
         setProperties(endpoint, parameters);
         if (config.getSslContextParameters() == null) {
             config.setSslContextParameters(retrieveGlobalSslContextParameters());
@@ -72,15 +73,16 @@ public class VertxMqttComponent extends DefaultComponent implements SSLContextPa
     @Override
     protected void doInit() throws Exception {
         super.doInit();
-        if (vertx == null) {
-            Vertx registered = CamelContextHelper.findSingleByType(getCamelContext(), Vertx.class);
-            if (registered != null) {
-                vertx = registered;
-            } else {
-                LOG.debug("Creating a Vert.x instance for the component");
-                vertx = vertxOptions != null ? Vertx.vertx(vertxOptions) : Vertx.vertx();
-                managedVertx = true;
-            }
+        if (vertx != null) {
+            return;
+        }
+        final Vertx registered = CamelContextHelper.findSingleByType(getCamelContext(), Vertx.class);
+        if (registered != null) {
+            vertx = registered;
+        } else {
+            LOG.debug("Creating a Vert.x instance for the component");
+            vertx = vertxOptions != null ? Vertx.vertx(vertxOptions) : Vertx.vertx();
+            managedVertx = true;
         }
     }
 
@@ -98,7 +100,7 @@ public class VertxMqttComponent extends DefaultComponent implements SSLContextPa
         return configuration;
     }
 
-    public void setConfiguration(VertxMqttConfiguration configuration) {
+    public void setConfiguration(final VertxMqttConfiguration configuration) {
         this.configuration = configuration;
     }
 
@@ -106,7 +108,7 @@ public class VertxMqttComponent extends DefaultComponent implements SSLContextPa
         return vertx;
     }
 
-    public void setVertx(Vertx vertx) {
+    public void setVertx(final Vertx vertx) {
         this.vertx = vertx;
     }
 
@@ -114,7 +116,7 @@ public class VertxMqttComponent extends DefaultComponent implements SSLContextPa
         return vertxOptions;
     }
 
-    public void setVertxOptions(VertxOptions vertxOptions) {
+    public void setVertxOptions(final VertxOptions vertxOptions) {
         this.vertxOptions = vertxOptions;
     }
 
@@ -124,7 +126,7 @@ public class VertxMqttComponent extends DefaultComponent implements SSLContextPa
     }
 
     @Override
-    public void setUseGlobalSslContextParameters(boolean useGlobalSslContextParameters) {
+    public void setUseGlobalSslContextParameters(final boolean useGlobalSslContextParameters) {
         this.useGlobalSslContextParameters = useGlobalSslContextParameters;
     }
 }

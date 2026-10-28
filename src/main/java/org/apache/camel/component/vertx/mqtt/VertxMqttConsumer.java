@@ -27,8 +27,8 @@ import org.apache.camel.support.DefaultConsumer;
 /**
  * Subscribes to the topic filter of the endpoint and turns every message into an exchange.
  * <p>
- * Exchanges are processed in the order the messages arrive, on a thread of the consumer, never on the event loop of
- * the client, which also keeps the connection alive. With more than {@code maxPendingMessages} waiting the client stops
+ * Exchanges are processed in the order the messages arrive, on a thread of the consumer, never on the event loop of the
+ * client, which also keeps the connection alive. With more than {@code maxPendingMessages} waiting the client stops
  * reading from the connection until half of them are done.
  */
 public class VertxMqttConsumer extends DefaultConsumer {

@@ -45,8 +45,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
- * The component against a real broker in a container, one container per test class, stopped at its end. Every test
- * uses topics of its own, so that tests do not see each other's messages.
+ * The component against a real broker in a container, one container per test class, stopped at its end. Every test uses
+ * topics of its own, so that tests do not see each other's messages.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class AbstractBrokerIT {

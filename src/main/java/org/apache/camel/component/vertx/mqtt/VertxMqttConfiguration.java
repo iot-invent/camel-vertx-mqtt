@@ -122,8 +122,8 @@ public class VertxMqttConfiguration implements Cloneable {
     @UriParam(label = "advanced", defaultValue = "false")
     private boolean willRetained;
     /**
-     * Whether the client connects again when the connection is lost, and keeps trying when the first connection
-     * fails. Without, a failed first connection fails the start of the route.
+     * Whether the client connects again when the connection is lost, and keeps trying when the first connection fails.
+     * Without, a failed first connection fails the start of the route.
      */
     @UriParam(defaultValue = "true")
     private boolean automaticReconnect = true;
@@ -175,7 +175,7 @@ public class VertxMqttConfiguration implements Cloneable {
     public VertxMqttConfiguration copy() {
         try {
             return (VertxMqttConfiguration) clone();
-        } catch (CloneNotSupportedException e) {
+        } catch (final CloneNotSupportedException e) {
             throw new RuntimeCamelException(e);
         }
     }
@@ -184,7 +184,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return brokerUrl;
     }
 
-    public void setBrokerUrl(String brokerUrl) {
+    public void setBrokerUrl(final String brokerUrl) {
         this.brokerUrl = brokerUrl;
     }
 
@@ -192,7 +192,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return mqttVersion;
     }
 
-    public void setMqttVersion(VertxMqttVersion mqttVersion) {
+    public void setMqttVersion(final VertxMqttVersion mqttVersion) {
         this.mqttVersion = mqttVersion;
     }
 
@@ -200,7 +200,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return clientId;
     }
 
-    public void setClientId(String clientId) {
+    public void setClientId(final String clientId) {
         this.clientId = clientId;
     }
 
@@ -208,7 +208,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return cleanStart;
     }
 
-    public void setCleanStart(boolean cleanStart) {
+    public void setCleanStart(final boolean cleanStart) {
         this.cleanStart = cleanStart;
     }
 
@@ -216,7 +216,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return qos;
     }
 
-    public void setQos(int qos) {
+    public void setQos(final int qos) {
         this.qos = qos;
     }
 
@@ -224,7 +224,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return retained;
     }
 
-    public void setRetained(boolean retained) {
+    public void setRetained(final boolean retained) {
         this.retained = retained;
     }
 
@@ -232,7 +232,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return keepAliveInterval;
     }
 
-    public void setKeepAliveInterval(int keepAliveInterval) {
+    public void setKeepAliveInterval(final int keepAliveInterval) {
         this.keepAliveInterval = keepAliveInterval;
     }
 
@@ -240,7 +240,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return connectTimeout;
     }
 
-    public void setConnectTimeout(long connectTimeout) {
+    public void setConnectTimeout(final long connectTimeout) {
         this.connectTimeout = connectTimeout;
     }
 
@@ -248,7 +248,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return sessionExpiryInterval;
     }
 
-    public void setSessionExpiryInterval(long sessionExpiryInterval) {
+    public void setSessionExpiryInterval(final long sessionExpiryInterval) {
         this.sessionExpiryInterval = sessionExpiryInterval;
     }
 
@@ -256,7 +256,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return receiveMaximum;
     }
 
-    public void setReceiveMaximum(int receiveMaximum) {
+    public void setReceiveMaximum(final int receiveMaximum) {
         this.receiveMaximum = receiveMaximum;
     }
 
@@ -264,7 +264,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return maxMessageSize;
     }
 
-    public void setMaxMessageSize(int maxMessageSize) {
+    public void setMaxMessageSize(final int maxMessageSize) {
         this.maxMessageSize = maxMessageSize;
     }
 
@@ -272,7 +272,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return maxInflightQueue;
     }
 
-    public void setMaxInflightQueue(int maxInflightQueue) {
+    public void setMaxInflightQueue(final int maxInflightQueue) {
         this.maxInflightQueue = maxInflightQueue;
     }
 
@@ -280,7 +280,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return ackTimeout;
     }
 
-    public void setAckTimeout(int ackTimeout) {
+    public void setAckTimeout(final int ackTimeout) {
         this.ackTimeout = ackTimeout;
     }
 
@@ -288,7 +288,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return willTopic;
     }
 
-    public void setWillTopic(String willTopic) {
+    public void setWillTopic(final String willTopic) {
         this.willTopic = willTopic;
     }
 
@@ -296,7 +296,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return willPayload;
     }
 
-    public void setWillPayload(String willPayload) {
+    public void setWillPayload(final String willPayload) {
         this.willPayload = willPayload;
     }
 
@@ -304,7 +304,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return willQos;
     }
 
-    public void setWillQos(int willQos) {
+    public void setWillQos(final int willQos) {
         this.willQos = willQos;
     }
 
@@ -312,7 +312,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return willRetained;
     }
 
-    public void setWillRetained(boolean willRetained) {
+    public void setWillRetained(final boolean willRetained) {
         this.willRetained = willRetained;
     }
 
@@ -320,7 +320,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return automaticReconnect;
     }
 
-    public void setAutomaticReconnect(boolean automaticReconnect) {
+    public void setAutomaticReconnect(final boolean automaticReconnect) {
         this.automaticReconnect = automaticReconnect;
     }
 
@@ -328,7 +328,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return reconnectDelay;
     }
 
-    public void setReconnectDelay(long reconnectDelay) {
+    public void setReconnectDelay(final long reconnectDelay) {
         this.reconnectDelay = reconnectDelay;
     }
 
@@ -336,7 +336,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return maxReconnectDelay;
     }
 
-    public void setMaxReconnectDelay(long maxReconnectDelay) {
+    public void setMaxReconnectDelay(final long maxReconnectDelay) {
         this.maxReconnectDelay = maxReconnectDelay;
     }
 
@@ -344,7 +344,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return manualAcksEnabled;
     }
 
-    public void setManualAcksEnabled(boolean manualAcksEnabled) {
+    public void setManualAcksEnabled(final boolean manualAcksEnabled) {
         this.manualAcksEnabled = manualAcksEnabled;
     }
 
@@ -352,7 +352,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return maxPendingMessages;
     }
 
-    public void setMaxPendingMessages(int maxPendingMessages) {
+    public void setMaxPendingMessages(final int maxPendingMessages) {
         this.maxPendingMessages = maxPendingMessages;
     }
 
@@ -360,7 +360,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return username;
     }
 
-    public void setUsername(String username) {
+    public void setUsername(final String username) {
         this.username = username;
     }
 
@@ -368,7 +368,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return password;
     }
 
-    public void setPassword(String password) {
+    public void setPassword(final String password) {
         this.password = password;
     }
 
@@ -376,7 +376,7 @@ public class VertxMqttConfiguration implements Cloneable {
         return sslContextParameters;
     }
 
-    public void setSslContextParameters(SSLContextParameters sslContextParameters) {
+    public void setSslContextParameters(final SSLContextParameters sslContextParameters) {
         this.sslContextParameters = sslContextParameters;
     }
 }

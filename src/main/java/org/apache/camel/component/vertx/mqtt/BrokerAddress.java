@@ -36,18 +36,18 @@ record BrokerAddress(String host, int port, boolean ssl) {
      * @return                          the broker it names
      * @throws IllegalArgumentException if it is no broker URL of a supported scheme
      */
-    static BrokerAddress parse(String url) {
+    static BrokerAddress parse(final String url) {
         if (url == null || url.isBlank()) {
             throw new IllegalArgumentException("The broker URL is required");
         }
-        URI uri;
+        final URI uri;
         try {
             uri = new URI(url.strip());
-        } catch (URISyntaxException e) {
+        } catch (final URISyntaxException e) {
             throw new IllegalArgumentException("Not a broker URL: " + url, e);
         }
-        String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(Locale.ROOT);
-        boolean ssl = switch (scheme) {
+        final String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(Locale.ROOT);
+        final boolean ssl = switch (scheme) {
             case "tcp", "mqtt" -> false;
             case "ssl", "mqtts" -> true;
             case "ws", "wss" -> throw new IllegalArgumentException(
@@ -58,7 +58,8 @@ record BrokerAddress(String host, int port, boolean ssl) {
         // Credentials belong into the username and password options, never into a URL that ends up in logs
         if (uri.getRawUserInfo() != null) {
             throw new IllegalArgumentException(
-                    "The broker URL must not carry user information, use the username and password options: " + uri.getHost());
+                    "The broker URL must not carry user information, use the username and password options: "
+                                               + uri.getHost());
         }
         String host = uri.getHost();
         if (host == null || host.isEmpty()) {
@@ -67,12 +68,12 @@ record BrokerAddress(String host, int port, boolean ssl) {
         if (host.startsWith("[") && host.endsWith("]")) {
             host = host.substring(1, host.length() - 1);
         }
-        String path = uri.getRawPath();
+        final String path = uri.getRawPath();
         if (path != null && !path.isEmpty() && !"/".equals(path) || uri.getRawQuery() != null
                 || uri.getRawFragment() != null) {
             throw new IllegalArgumentException("The broker URL must not have a path, query or fragment: " + url);
         }
-        int port = uri.getPort() >= 0 ? uri.getPort() : ssl ? DEFAULT_TLS_PORT : DEFAULT_PORT;
+        final int port = uri.getPort() >= 0 ? uri.getPort() : ssl ? DEFAULT_TLS_PORT : DEFAULT_PORT;
         return new BrokerAddress(host, port, ssl);
     }
 

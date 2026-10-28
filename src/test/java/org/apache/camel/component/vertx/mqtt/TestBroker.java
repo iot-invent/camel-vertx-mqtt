@@ -200,7 +200,8 @@ final class TestBroker implements AutoCloseable {
         if (!acknowledgePublications) {
             return;
         }
-        received.add(new Received(endpoint.clientIdentifier(), message.topicName(), message.payload().getBytes(),
+        received.add(new Received(
+                endpoint.clientIdentifier(), message.topicName(), message.payload().getBytes(),
                 message.qosLevel().value(), message.isRetain(), message.properties()));
         switch (message.qosLevel()) {
             case AT_LEAST_ONCE -> endpoint.publishAcknowledge(message.messageId());

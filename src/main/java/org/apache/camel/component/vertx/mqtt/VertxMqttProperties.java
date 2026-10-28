@@ -40,9 +40,9 @@ final class VertxMqttProperties {
     /**
      * @return the properties the headers of a message set, empty if they set none
      */
-    static MqttProperties fromHeaders(Message message) {
-        MqttProperties properties = new MqttProperties();
-        Map<?, ?> user = message.getHeader(VertxMqttConstants.USER_PROPERTIES, Map.class);
+    static MqttProperties fromHeaders(final Message message) {
+        final MqttProperties properties = new MqttProperties();
+        final Map<?, ?> user = message.getHeader(VertxMqttConstants.USER_PROPERTIES, Map.class);
         if (user != null) {
             user.forEach((key, value) -> {
                 if (key != null && value != null) {
@@ -50,26 +50,27 @@ final class VertxMqttProperties {
                 }
             });
         }
-        String contentType = message.getHeader(VertxMqttConstants.CONTENT_TYPE, String.class);
+        final String contentType = message.getHeader(VertxMqttConstants.CONTENT_TYPE, String.class);
         if (contentType != null) {
             properties.add(new StringProperty(MqttPropertyType.CONTENT_TYPE.value(), contentType));
         }
-        String responseTopic = message.getHeader(VertxMqttConstants.RESPONSE_TOPIC, String.class);
+        final String responseTopic = message.getHeader(VertxMqttConstants.RESPONSE_TOPIC, String.class);
         if (responseTopic != null) {
             properties.add(new StringProperty(MqttPropertyType.RESPONSE_TOPIC.value(), responseTopic));
         }
-        byte[] correlationData = message.getHeader(VertxMqttConstants.CORRELATION_DATA, byte[].class);
+        final byte[] correlationData = message.getHeader(VertxMqttConstants.CORRELATION_DATA, byte[].class);
         if (correlationData != null) {
             properties.add(new BinaryProperty(MqttPropertyType.CORRELATION_DATA.value(), correlationData));
         }
-        Long expiry = message.getHeader(VertxMqttConstants.MESSAGE_EXPIRY_INTERVAL, Long.class);
+        final Long expiry = message.getHeader(VertxMqttConstants.MESSAGE_EXPIRY_INTERVAL, Long.class);
         if (expiry != null) {
             if (expiry < 0 || expiry > 0xFFFF_FFFFL) {
                 throw new IllegalArgumentException(
                         "The message expiry interval must be between 0 and 4294967295 seconds, not " + expiry);
             }
             // A four byte integer of the protocol, carried as the bits of an int
-            properties.add(new IntegerProperty(MqttPropertyType.PUBLICATION_EXPIRY_INTERVAL.value(),
+            properties.add(new IntegerProperty(
+                    MqttPropertyType.PUBLICATION_EXPIRY_INTERVAL.value(),
                     (int) expiry.longValue()));
         }
         return properties;
@@ -78,18 +79,18 @@ final class VertxMqttProperties {
     /**
      * Sets the headers of a message from the properties of a received PUBLISH packet.
      */
-    static void toHeaders(MqttProperties properties, Message message) {
+    static void toHeaders(final MqttProperties properties, final Message message) {
         if (properties == null || properties.isEmpty()) {
             return;
         }
-        Map<String, String> user = new LinkedHashMap<>();
-        for (MqttProperty<?> property : properties.getProperties(MqttPropertyType.USER_PROPERTY.value())) {
-            Object value = property.value();
-            if (value instanceof StringPair pair) {
+        final Map<String, String> user = new LinkedHashMap<>();
+        for (final MqttProperty<?> property : properties.getProperties(MqttPropertyType.USER_PROPERTY.value())) {
+            final Object value = property.value();
+            if (value instanceof final StringPair pair) {
                 user.put(pair.key, pair.value);
-            } else if (value instanceof Collection<?> pairs) {
-                for (Object each : pairs) {
-                    if (each instanceof StringPair pair) {
+            } else if (value instanceof final Collection<?> pairs) {
+                for (final Object each : pairs) {
+                    if (each instanceof final StringPair pair) {
                         user.put(pair.key, pair.value);
                     }
                 }
@@ -98,20 +99,20 @@ final class VertxMqttProperties {
         if (!user.isEmpty()) {
             message.setHeader(VertxMqttConstants.USER_PROPERTIES, user);
         }
-        MqttProperty<?> contentType = properties.getProperty(MqttPropertyType.CONTENT_TYPE.value());
+        final MqttProperty<?> contentType = properties.getProperty(MqttPropertyType.CONTENT_TYPE.value());
         if (contentType != null) {
             message.setHeader(VertxMqttConstants.CONTENT_TYPE, contentType.value());
         }
-        MqttProperty<?> responseTopic = properties.getProperty(MqttPropertyType.RESPONSE_TOPIC.value());
+        final MqttProperty<?> responseTopic = properties.getProperty(MqttPropertyType.RESPONSE_TOPIC.value());
         if (responseTopic != null) {
             message.setHeader(VertxMqttConstants.RESPONSE_TOPIC, responseTopic.value());
         }
-        MqttProperty<?> correlationData = properties.getProperty(MqttPropertyType.CORRELATION_DATA.value());
+        final MqttProperty<?> correlationData = properties.getProperty(MqttPropertyType.CORRELATION_DATA.value());
         if (correlationData != null) {
             message.setHeader(VertxMqttConstants.CORRELATION_DATA, correlationData.value());
         }
-        MqttProperty<?> expiry = properties.getProperty(MqttPropertyType.PUBLICATION_EXPIRY_INTERVAL.value());
-        if (expiry != null && expiry.value() instanceof Integer seconds) {
+        final MqttProperty<?> expiry = properties.getProperty(MqttPropertyType.PUBLICATION_EXPIRY_INTERVAL.value());
+        if (expiry != null && expiry.value() instanceof final Integer seconds) {
             message.setHeader(VertxMqttConstants.MESSAGE_EXPIRY_INTERVAL, Integer.toUnsignedLong(seconds));
         }
     }

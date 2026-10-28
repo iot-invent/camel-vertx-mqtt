@@ -47,30 +47,31 @@ final class VertxMqttTlsHelper {
      * Sets the key managers, trust managers, protocols and cipher suites of the parameters on the options. Host name
      * verification is set by the caller and not touched here.
      */
-    static void configure(MqttClientOptions options, SSLContextParameters parameters, CamelContext camelContext) {
+    static void configure(
+            final MqttClientOptions options, final SSLContextParameters parameters, final CamelContext camelContext) {
         own(parameters, camelContext);
         try {
-            KeyManagersParameters keyManagers = parameters.getKeyManagers();
+            final KeyManagersParameters keyManagers = parameters.getKeyManagers();
             if (keyManagers != null) {
                 own(keyManagers, camelContext);
                 own(keyManagers.getKeyStore(), camelContext);
                 options.setKeyCertOptions(KeyCertOptions.wrap(first(keyManagers.createKeyManagers())));
             }
-            TrustManagersParameters trustManagers = parameters.getTrustManagers();
+            final TrustManagersParameters trustManagers = parameters.getTrustManagers();
             if (trustManagers != null) {
                 own(trustManagers, camelContext);
                 own(trustManagers.getKeyStore(), camelContext);
                 options.setTrustOptions(TrustOptions.wrap(first(trustManagers.createTrustManagers())));
             }
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new RuntimeCamelException("Cannot read the key or trust managers of the SSL context parameters", e);
         }
-        SecureSocketProtocolsParameters protocols = parameters.getSecureSocketProtocols();
+        final SecureSocketProtocolsParameters protocols = parameters.getSecureSocketProtocols();
         if (protocols != null && protocols.getSecureSocketProtocol() != null
                 && !protocols.getSecureSocketProtocol().isEmpty()) {
             options.setEnabledSecureTransportProtocols(new LinkedHashSet<>(protocols.getSecureSocketProtocol()));
         }
-        CipherSuitesParameters cipherSuites = parameters.getCipherSuites();
+        final CipherSuitesParameters cipherSuites = parameters.getCipherSuites();
         if (cipherSuites != null && cipherSuites.getCipherSuite() != null) {
             cipherSuites.getCipherSuite().forEach(options::addEnabledCipherSuite);
         }
@@ -79,24 +80,24 @@ final class VertxMqttTlsHelper {
     /**
      * Key stores resolve their resource through the Camel context, which nested parameters do not inherit.
      */
-    private static void own(JsseParameters parameters, CamelContext camelContext) {
+    private static void own(final JsseParameters parameters, final CamelContext camelContext) {
         if (parameters != null && parameters.getCamelContext() == null) {
             parameters.setCamelContext(camelContext);
         }
     }
 
-    private static X509KeyManager first(KeyManager[] managers) {
-        for (KeyManager manager : managers) {
-            if (manager instanceof X509KeyManager x509) {
+    private static X509KeyManager first(final KeyManager[] managers) {
+        for (final KeyManager manager : managers) {
+            if (manager instanceof final X509KeyManager x509) {
                 return x509;
             }
         }
         throw new IllegalArgumentException("The SSL context parameters hold no X.509 key manager");
     }
 
-    private static X509TrustManager first(TrustManager[] managers) {
-        for (TrustManager manager : managers) {
-            if (manager instanceof X509TrustManager x509) {
+    private static X509TrustManager first(final TrustManager[] managers) {
+        for (final TrustManager manager : managers) {
+            if (manager instanceof final X509TrustManager x509) {
                 return x509;
             }
         }
