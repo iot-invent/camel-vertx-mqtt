@@ -20,9 +20,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 import io.netty.handler.codec.mqtt.MqttProperties;
@@ -62,6 +64,10 @@ final class VertxMqttConnection {
     private volatile boolean started;
     private volatile boolean stopping;
     private volatile boolean connected;
+    // Why the connection is down or the subscription failed, null while all is well or before the first attempt
+    private volatile Throwable failure;
+    // Told of a failure once, not again for every attempt that fails the same way
+    private final List<Consumer<Throwable>> failureListeners = new CopyOnWriteArrayList<>();
 
     // Below on the context only
     private boolean connecting;
@@ -93,6 +99,7 @@ final class VertxMqttConnection {
         }
         started = true;
         stopping = false;
+        failure = null;
         nextDelay = Math.max(1, configuration.getReconnectDelay());
         context = vertx.getOrCreateContext();
         client = MqttClient.create(vertx, options);
@@ -118,6 +125,8 @@ final class VertxMqttConnection {
             client.subscribeCompletionHandler(ack -> {
                 if (ack.grantedQoSLevels().stream().anyMatch(granted -> granted == null || granted > 2)) {
                     LOG.warn("The MQTT broker {} refused the subscription to {}", broker, subscription);
+                    failed(new IllegalStateException(
+                            "The MQTT broker " + broker + " refused the subscription to " + subscription));
                 }
             });
             connect(first);
@@ -187,6 +196,7 @@ final class VertxMqttConnection {
                     return;
                 }
                 connected = true;
+                failure = null;
                 nextDelay = Math.max(1, configuration.getReconnectDelay());
                 LOG.info("Connected to the MQTT broker {}", broker);
                 subscribe();
@@ -197,6 +207,8 @@ final class VertxMqttConnection {
                 }
             } else {
                 LOG.warn("Cannot connect to the MQTT broker {}: {}", broker, ar.cause().getMessage());
+                failed(new IllegalStateException(
+                        "Cannot connect to the MQTT broker " + broker + ": " + ar.cause().getMessage(), ar.cause()));
                 if (first != null) {
                     first.completeExceptionally(ar.cause());
                 }
@@ -219,6 +231,7 @@ final class VertxMqttConnection {
             return;
         }
         LOG.warn("The connection to the MQTT broker {} was lost", broker);
+        failed(new IllegalStateException("The connection to the MQTT broker " + broker + " was lost"));
         if (configuration.isAutomaticReconnect()) {
             scheduleReconnect();
         } else {
@@ -347,7 +360,11 @@ final class VertxMqttConnection {
     private void subscribe() {
         if (subscription != null && client != null && client.isConnected()) {
             client.subscribe(subscription, subscriptionQos)
-                    .onFailure(e -> LOG.warn("Cannot subscribe to {} on {}: {}", subscription, broker, e.getMessage()));
+                    .onFailure(e -> {
+                        LOG.warn("Cannot subscribe to {} on {}: {}", subscription, broker, e.getMessage());
+                        failed(new IllegalStateException(
+                                "Cannot subscribe to " + subscription + " on " + broker + ": " + e.getMessage(), e));
+                    });
         }
     }
 
@@ -407,6 +424,33 @@ final class VertxMqttConnection {
 
     boolean isConnected() {
         return connected;
+    }
+
+    /**
+     * @return why the connection is down or the subscription failed, {@code null} while all is well or before the
+     *         first attempt
+     */
+    Throwable failure() {
+        return failure;
+    }
+
+    /**
+     * @param listener told of a failure of the connection or the subscription, once while it fails the same way
+     */
+    void addFailureListener(final Consumer<Throwable> listener) {
+        failureListeners.add(listener);
+    }
+
+    void removeFailureListener(final Consumer<Throwable> listener) {
+        failureListeners.remove(listener);
+    }
+
+    private void failed(final Throwable cause) {
+        final Throwable previous = failure;
+        failure = cause;
+        if (previous == null || !String.valueOf(previous.getMessage()).equals(cause.getMessage())) {
+            failureListeners.forEach(listener -> listener.accept(cause));
+        }
     }
 
     BrokerAddress broker() {

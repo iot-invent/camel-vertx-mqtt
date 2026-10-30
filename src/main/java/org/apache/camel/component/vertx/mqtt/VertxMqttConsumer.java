@@ -16,6 +16,7 @@
 package org.apache.camel.component.vertx.mqtt;
 
 import java.util.concurrent.ExecutorService;
+import java.util.function.Consumer;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.mqtt.messages.MqttPublishMessage;
@@ -30,10 +31,14 @@ import org.apache.camel.support.DefaultConsumer;
  * Exchanges are processed in the order the messages arrive, on a thread of the consumer, never on the event loop of the
  * client, which also keeps the connection alive. With more than {@code maxPendingMessages} waiting the client stops
  * reading from the connection until half of them are done.
+ * <p>
+ * A connection or a subscription that fails is handed to the exception handler of the consumer once, and reported by
+ * its health check until it succeeds: with automatic reconnect the consumer starts all the same.
  */
 public class VertxMqttConsumer extends DefaultConsumer {
 
-    private VertxMqttConnection connection;
+    private volatile VertxMqttConnection connection;
+    private final Consumer<Throwable> failureListener = this::failed;
     private ExecutorService executor;
     // Under the lock of the consumer
     private int pending;
@@ -49,11 +54,20 @@ public class VertxMqttConsumer extends DefaultConsumer {
     }
 
     @Override
+    protected void doInit() throws Exception {
+        super.doInit();
+        if (getHealthCheck() == null) {
+            setHealthCheck(new VertxMqttConsumerHealthCheck(this, getRouteId()));
+        }
+    }
+
+    @Override
     protected void doStart() throws Exception {
         super.doStart();
         executor = getEndpoint().getCamelContext().getExecutorServiceManager().newSingleThreadExecutor(this,
                 "VertxMqttConsumer[" + getEndpoint().getTopic() + "]");
         connection = getEndpoint().acquireConnection();
+        connection.addFailureListener(failureListener);
         connection.subscribe(getEndpoint().getTopic(), getEndpoint().getConfiguration().getQos(), this::received);
     }
 
@@ -61,6 +75,7 @@ public class VertxMqttConsumer extends DefaultConsumer {
     protected void doStop() throws Exception {
         if (connection != null) {
             // A session the broker keeps (no clean start) keeps the subscription, messages wait there meanwhile
+            connection.removeFailureListener(failureListener);
             connection.unsubscribe(getEndpoint().getConfiguration().isCleanStart());
             connection = null;
             getEndpoint().releaseConnection();
@@ -74,6 +89,20 @@ public class VertxMqttConsumer extends DefaultConsumer {
             paused = false;
         }
         super.doStop();
+    }
+
+    /**
+     * @return the connection while the consumer is started, for its health check
+     */
+    VertxMqttConnection connection() {
+        return connection;
+    }
+
+    /**
+     * On the context of the connection.
+     */
+    private void failed(Throwable cause) {
+        getExceptionHandler().handleException(cause.getMessage(), cause);
     }
 
     /**

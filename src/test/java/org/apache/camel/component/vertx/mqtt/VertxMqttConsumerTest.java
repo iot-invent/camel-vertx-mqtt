@@ -22,8 +22,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
+import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttProperties;
 import io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType;
 import io.netty.handler.codec.mqtt.MqttProperties.StringProperty;
@@ -32,7 +34,10 @@ import io.vertx.core.Vertx;
 import org.apache.camel.CamelContext;
 import org.apache.camel.Message;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.health.HealthCheck;
+import org.apache.camel.health.HealthCheckAware;
 import org.apache.camel.impl.DefaultCamelContext;
+import org.apache.camel.spi.ExceptionHandler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -217,5 +222,49 @@ class VertxMqttConsumerTest {
         await().atMost(WAIT).until(() -> received.size() == 50);
         assertEquals(sent, received.stream().map(message -> message.getBody(String.class)).toList());
         assertNull(received.peek().getHeader(VertxMqttConstants.MESSAGE_ID));
+    }
+
+    @Test
+    void reportsWhyItCannotConnectUntilItDoes() throws Exception {
+        broker.reject(MqttConnectReturnCode.CONNECTION_REFUSED_IDENTIFIER_REJECTED);
+        List<Throwable> handled = new CopyOnWriteArrayList<>();
+        context.getRegistry().bind("handler", new ExceptionHandler() {
+            @Override
+            public void handleException(Throwable exception) {
+                handled.add(exception);
+            }
+
+            @Override
+            public void handleException(String message, Throwable exception) {
+                handled.add(exception);
+            }
+
+            @Override
+            public void handleException(String message, org.apache.camel.Exchange exchange, Throwable exception) {
+                handled.add(exception);
+            }
+        });
+        context.addRoutes(new RouteBuilder() {
+            @Override
+            public void configure() {
+                from("vertx-mqtt:a?brokerUrl=" + broker.url() + "&reconnectDelay=50&exceptionHandler=#handler")
+                        .routeId("consumer").process(exchange -> received.add(exchange.getMessage().copy()));
+            }
+        });
+        HealthCheck check = ((HealthCheckAware) context.getRoute("consumer").getConsumer()).getHealthCheck();
+
+        await().atMost(WAIT).untilAsserted(() -> {
+            HealthCheck.Result result = check.call();
+            assertEquals(HealthCheck.State.DOWN, result.getState());
+            assertTrue(result.getMessage().orElse("").contains("Cannot connect to the MQTT broker"),
+                    result.getMessage().orElse(""));
+        });
+        // Every attempt fails the same way, the handler hears of it once
+        Thread.sleep(300);
+        assertEquals(1, handled.size(), handled.toString());
+
+        broker.reject(null);
+        await().atMost(WAIT).until(() -> check.call().getState() == HealthCheck.State.UP);
+        assertTrue(broker.hasSubscription("a"));
     }
 }
